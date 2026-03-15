@@ -9,16 +9,16 @@
 
 A CLI tool that turns **any website** into a command-line interface. **47 commands** across **17 sites** — bilibili, zhihu, xiaohongshu, twitter, reddit, xueqiu, github, v2ex, hackernews, bbc, weibo, boss, yahoo-finance, reuters, smzdm, ctrip, youtube — powered by browser session reuse and AI-native discovery.
 
-## ✨ Highlights
+## Highlights
 
-- 🔐 **Account-safe** — Reuses Chrome's logged-in state; your credentials never leave the browser
-- 🤖 **AI Agent ready** — `explore` discovers APIs, `synthesize` generates adapters, `cascade` finds auth strategies
-- 🚀 **Dynamic Loader** — Simply drop `.ts` or `.yaml` adapters into the `clis/` folder for auto-registration
-- 📝 **Dual-Engine Architecture**:
+- **Account-safe** — Reuses Chrome's logged-in state; your credentials never leave the browser
+- **AI Agent ready** — `explore` discovers APIs, `synthesize` generates adapters, `cascade` finds auth strategies
+- **Dynamic Loader** — Simply drop `.ts` or `.yaml` adapters into the `clis/` folder for auto-registration
+- **Dual-Engine Architecture**:
   - **YAML Declarative Engine**: Most adapters are minimal ~30 lines of YAML pipeline
   - **Native Browser Injection Engine**: Advanced TypeScript utilities (`installInterceptor`, `autoScroll`) for XHR hijacking, GraphQL unwrapping, and store mutation
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Install via npm (recommended)
 
@@ -53,7 +53,7 @@ npm update -g @jackwener/opencli
 npm install -g @jackwener/opencli@latest
 ```
 
-## 📋 Prerequisites
+## Prerequisites
 
 Browser commands need:
 1. **Chrome** running **and logged into the target site** (e.g. bilibili.com, zhihu.com, xiaohongshu.com)
@@ -78,7 +78,7 @@ Public API commands (`hackernews`, `github search`, `v2ex`) need no browser at a
 
 > **⚠️ Important**: Browser commands reuse your Chrome login session. You must be logged into the target website in Chrome before running commands. If you get empty data or errors, check your login status first.
 
-## 📦 Built-in Commands
+## Built-in Commands
 
 | Site | Commands | Mode |
 |------|----------|------|
@@ -100,7 +100,7 @@ Public API commands (`hackernews`, `github search`, `v2ex`) need no browser at a
 | **hackernews** | `top` | 🌐 Public |
 | **bbc** | `news` | 🌐 Public |
 
-## 🎨 Output Formats
+## Output Formats
 
 ```bash
 opencli bilibili hot -f table   # Default: rich table
@@ -110,7 +110,7 @@ opencli bilibili hot -f csv     # CSV
 opencli bilibili hot -v         # Verbose: show pipeline steps
 ```
 
-## 🧠 AI Agent Workflow
+## AI Agent Workflow
 
 > [!IMPORTANT]
 > AI Agent 创建新适配器时，**必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)**，其中包含完整的浏览器探索工作流、认证策略决策树和调试指南。
@@ -135,10 +135,10 @@ Explore outputs to `.opencli/explore/<site>/`:
 - `capabilities.json` — inferred capabilities with confidence scores
 - `auth.json` — authentication strategy recommendations
 
-## 🔧 Create New Commands
+## Create New Commands
 
 > [!CAUTION]
-> **🚨 必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！** 它是适配器开发的完全指南，包含 API 发现工作流、5 级认证策略、平台 SDK 参考、YAML/TS 选择决策树、`tap` 调试流程和常见陷阱。**跳过此文档直接写代码会导致大量可避免的错误。**
+> **必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！** 它是适配器开发的完全指南，包含 API 发现工作流、5 级认证策略、平台 SDK 参考、YAML/TS 选择决策树、`tap` 调试流程和常见陷阱。**跳过此文档直接写代码会导致大量可避免的错误。**
 
 ## Releasing New Versions
 
@@ -154,6 +154,6 @@ git push --follow-tags
 
 The CI will automatically build, create a GitHub release, and publish to npm.
 
-## 📄 License
+## License
 
 MIT

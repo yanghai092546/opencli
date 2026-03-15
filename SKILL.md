@@ -11,7 +11,7 @@ tags: [cli, browser, web, mcp, playwright, bilibili, zhihu, twitter, github, v2e
 > Make any website your CLI. Reuse Chrome login, zero risk, AI-powered discovery.
 
 > [!CAUTION]
-> **🚨 AI Agent 必读：创建或修改任何适配器之前，你必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！**
+> **AI Agent 必读：创建或修改任何适配器之前，你必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！**
 > 该文档包含完整的 API 发现工作流（必须使用 Playwright MCP Bridge 浏览器探索）、5 级认证策略决策树、平台 SDK 速查表、`tap` 步骤调试流程、分页 API 模板、级联请求模式、以及常见陷阱。
 > **本文件（SKILL.md）仅提供命令参考和简化模板，不足以正确开发适配器。**
 

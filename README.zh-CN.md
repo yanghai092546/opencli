@@ -9,17 +9,17 @@
 
 OpenCLI 通过 Chrome 浏览器 + [Playwright MCP Bridge](https://github.com/nichochar/playwright-mcp) 扩展，将任何网站变成命令行工具。不存密码、不泄 token，直接复用浏览器已登录状态。
 
-## ✨ 亮点
+## 亮点
 
-- 🌐 **47 个命令，17 个站点** — B站、知乎、小红书、Twitter、Reddit、雪球(xueqiu)、GitHub、V2EX、Hacker News、BBC、微博、BOSS直聘、Yahoo Finance、路透社、什么值得买、携程、YouTube
-- 🔐 **零风控** — 复用 Chrome 登录态，无需存储任何凭证
-- 🤖 **AI 原生** — `explore` 自动发现 API，`synthesize` 生成适配器，`cascade` 探测认证策略
-- 🚀 **动态加载引擎** — 只需将 `.ts` 或 `.yaml` 适配器放入 `clis/` 文件夹即可自动注册生效
-- 📝 **双引擎架构设计**:
+- **47 个命令，17 个站点** — B站、知乎、小红书、Twitter、Reddit、雪球(xueqiu)、GitHub、V2EX、Hacker News、BBC、微博、BOSS直聘、Yahoo Finance、路透社、什么值得买、携程、YouTube
+- **零风控** — 复用 Chrome 登录态，无需存储任何凭证
+- **AI 原生** — `explore` 自动发现 API，`synthesize` 生成适配器，`cascade` 探测认证策略
+- **动态加载引擎** — 只需将 `.ts` 或 `.yaml` 适配器放入 `clis/` 文件夹即可自动注册生效
+- **双引擎架构设计**:
   - **YAML 声明式引擎**：大部分适配器只需极简的 ~30 行 YAML 声明
   - **原生浏览器注入引擎**：提供高级 TS API（`installInterceptor`、`autoScroll`）轻松实现 XHR 劫持、GraphQL 解包及状态库注入
 
-## 🚀 快速开始
+## 快速开始
 
 ### npm 全局安装（推荐）
 
@@ -54,7 +54,7 @@ npm update -g @jackwener/opencli
 npm install -g @jackwener/opencli@latest
 ```
 
-## 📋 前置要求
+## 前置要求
 
 浏览器命令需要：
 1. **Chrome** 浏览器正在运行，且**已登录目标网站**（如 bilibili.com、zhihu.com、xiaohongshu.com）
@@ -79,7 +79,7 @@ npm install -g @jackwener/opencli@latest
 
 > **⚠️ 重要**：浏览器命令复用你的 Chrome 登录状态。运行命令前，你必须已在 Chrome 中登录目标网站。如果获取到空数据或报错，请先检查登录状态。
 
-## 📦 内置命令
+## 内置命令
 
 | 站点 | 命令 | 模式 |
 |------|------|------|
@@ -101,7 +101,7 @@ npm install -g @jackwener/opencli@latest
 | **hackernews** | `top` | 🌐 公共 API |
 | **bbc** | `news` | 🌐 公共 API |
 
-## 🎨 输出格式
+## 输出格式
 
 ```bash
 opencli bilibili hot -f table   # 默认：表格
@@ -111,7 +111,7 @@ opencli bilibili hot -f csv     # CSV
 opencli bilibili hot -v         # 详细模式：展示 pipeline 每步数据
 ```
 
-## 🧠 AI Agent 工作流
+## AI Agent 工作流
 
 > [!IMPORTANT]
 > AI Agent 创建新适配器时，**必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)**，其中包含完整的浏览器探索工作流、认证策略决策树和调试指南。
@@ -136,10 +136,10 @@ opencli cascade https://api.example.com/data
 - `capabilities.json` — 推理出的能力及置信度
 - `auth.json` — 认证策略建议
 
-## 🔧 创建新命令
+## 创建新命令
 
 > [!CAUTION]
-> **🚨 必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！** 它是适配器开发的完全指南，包含 API 发现工作流、5 级认证策略、平台 SDK 参考、YAML/TS 选择决策树、`tap` 调试流程和常见陷阱。**跳过此文档直接写代码会导致大量可避免的错误。**
+> **必须先阅读 [CLI-CREATOR.md](./CLI-CREATOR.md)！** 它是适配器开发的完全指南，包含 API 发现工作流、5 级认证策略、平台 SDK 参考、YAML/TS 选择决策树、`tap` 调试流程和常见陷阱。**跳过此文档直接写代码会导致大量可避免的错误。**
 
 ## 版本发布
 
@@ -153,6 +153,6 @@ npm version major   # 0.1.0 → 1.0.0
 git push --follow-tags
 ```
 
-## 📄 License
+## License
 
 MIT

@@ -5,7 +5,7 @@
 
 ---
 
-## ⚠️ AI Agent 开发者必读：用 Playwright MCP Bridge 探索
+## AI Agent 开发者必读：用 Playwright MCP Bridge 探索
 
 > [!CAUTION]
 > **你（AI Agent）必须通过 Playwright MCP Bridge 打开浏览器去访问目标网站！**  
@@ -38,7 +38,7 @@
 | 遇到 HTTP 200 但空数据就放弃 | 检查是否需要 Wbi 签名或 Cookie 鉴权 |
 | 完全依赖 `__INITIAL_STATE__` 拿所有数据 | `__INITIAL_STATE__` 只有首屏数据，深层数据要调 API |
 
-### ✅ 实战成功案例：5 分钟实现「关注列表」适配器
+### 实战成功案例：5 分钟实现「关注列表」适配器
 
 以下是用上述工作流实际发现 Bilibili 关注列表 API 的完整过程：
 
@@ -51,7 +51,7 @@
    fetch('/x/relation/followings?vmid=137702077&pn=1&ps=5', {credentials:'include'})
    → { code: 0, data: { total: 1342, list: [{mid, uname, sign, ...}] } }
 4. 结论：标准 Cookie API，无需 Wbi 签名
-5. 写 following.ts → 一次构建通过 ✅
+5. 写 following.ts → 一次构建通过
 ```
 
 **关键决策点**：
@@ -174,7 +174,7 @@ opencli cascade https://api.example.com/hot
 
 ## Step 2.5: 准备工作（写代码之前）
 
-### 🎯 先找模板：从最相似的现有适配器开始
+### 先找模板：从最相似的现有适配器开始
 
 **不要从零开始写**。先看看同站点已有哪些适配器：
 
@@ -207,7 +207,7 @@ cat src/clis/<site>/feed.ts   # 读最相似的那个
 - 含 `/wbi/` 或 `w_rid=` → 必须用 `apiGet(..., { signed: true })`
 - 不含 → 直接用 `fetchJson`
 
-> 💡 其他站点（Twitter、小红书等）暂无专用 SDK，直接用 `page.evaluate` + `fetch` 即可。
+> 其他站点（Twitter、小红书等）暂无专用 SDK，直接用 `page.evaluate` + `fetch` 即可。
 
 ---
 
@@ -252,7 +252,7 @@ func: async (page, kwargs) => {
 },
 ```
 
-> 💡 大多数站点的 `ps` 上限是 20~50。超过会被静默截断或返回错误。
+> 大多数站点的 `ps` 上限是 20~50。超过会被静默截断或返回错误。
 
 ### 方式 A: YAML Pipeline（声明式，推荐）
 
@@ -530,13 +530,13 @@ cli({
 
 > **拦截核心思路**：不自己构造签名，而是利用 `installInterceptor` 劫持网站自己的 `XMLHttpRequest` 和 `fetch`，让网站发请求，我们直接在底层取出解析好的 `response.json()`。
 
-> 💡 **级联请求**（如 BVID→CID→字幕）的完整模板和要点见下方[进阶模式: 级联请求](#进阶模式-级联请求-cascading-requests)章节。
+> **级联请求**（如 BVID→CID→字幕）的完整模板和要点见下方[进阶模式: 级联请求](#进阶模式-级联请求-cascading-requests)章节。
 
 ---
 
 ## Step 4: 测试
 
-> **⚠️ 构建通过 ≠ 功能正常**。`npm run build` 只验证 TypeScript / YAML 语法，不验证运行时行为。  
+> **构建通过 ≠ 功能正常**。`npm run build` 只验证 TypeScript / YAML 语法，不验证运行时行为。  
 > 每个新命令 **必须实际运行** 并确认输出正确后才算完成。
 
 ### 必做清单
@@ -555,7 +555,7 @@ opencli mysite hot --limit 3 -f json   # JSON 输出确认字段完整
 
 ### tap 步骤调试（intercept 策略专用）
 
-> **⚠️ 不要猜 store name / action name**。先用 evaluate 探索，再写 YAML。
+> **不要猜 store name / action name**。先用 evaluate 探索，再写 YAML。
 
 #### Step 1: 列出所有 Pinia store
 
@@ -614,7 +614,7 @@ opencli list | grep mysite                            # 确认注册
 git add src/clis/mysite/ && git commit -m "feat(mysite): add hot" && git push
 ```
 
-> 💡 **架构理念**：OpenCLI 内建 **Zero-Dependency jq** 数据流 — 所有解析在 `evaluate` 的原生 JS 内完成，外层 YAML 用 `select`/`map` 提取，无需依赖系统 `jq` 二进制。
+> **架构理念**：OpenCLI 内建 **Zero-Dependency jq** 数据流 — 所有解析在 `evaluate` 的原生 JS 内完成，外层 YAML 用 `select`/`map` 提取，无需依赖系统 `jq` 二进制。
 
 ---
 
