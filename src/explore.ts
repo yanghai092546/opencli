@@ -10,6 +10,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { DEFAULT_BROWSER_EXPLORE_TIMEOUT, browserSession, runWithTimeout } from './runtime.js';
 import { VOLATILE_PARAMS, SEARCH_PARAMS, PAGINATION_PARAMS, LIMIT_PARAMS, FIELD_ROLES } from './constants.js';
+import { detectFramework } from './scripts/framework.js';
+import { discoverStores } from './scripts/store.js';
+import { interactFuzz } from './scripts/interact.js';
 
 // ── Site name detection ────────────────────────────────────────────────────
 
@@ -201,63 +204,11 @@ function inferStrategy(authIndicators: string[]): string {
 
 // ── Framework detection ────────────────────────────────────────────────────
 
-const FRAMEWORK_DETECT_JS = `
-  () => {
-    const r = {};
-    try {
-      const app = document.querySelector('#app');
-      r.vue3 = !!(app && app.__vue_app__);
-      r.vue2 = !!(app && app.__vue__);
-      r.react = !!window.__REACT_DEVTOOLS_GLOBAL_HOOK__ || !!document.querySelector('[data-reactroot]');
-      r.nextjs = !!window.__NEXT_DATA__;
-      r.nuxt = !!window.__NUXT__;
-      if (r.vue3 && app.__vue_app__) { const gp = app.__vue_app__.config?.globalProperties; r.pinia = !!(gp && gp.$pinia); r.vuex = !!(gp && gp.$store); }
-    } catch {}
-    return r;
-  }
-`;
+const FRAMEWORK_DETECT_JS = detectFramework.toString();
 
 // ── Store discovery ────────────────────────────────────────────────────────
 
-const STORE_DISCOVER_JS = `
-  () => {
-    const stores = [];
-    try {
-      const app = document.querySelector('#app');
-      if (!app?.__vue_app__) return stores;
-      const gp = app.__vue_app__.config?.globalProperties;
-
-      // Pinia stores
-      const pinia = gp?.$pinia;
-      if (pinia?._s) {
-        pinia._s.forEach((store, id) => {
-          const actions = [];
-          const stateKeys = [];
-          for (const k in store) {
-            try {
-              if (k.startsWith('$') || k.startsWith('_')) continue;
-              if (typeof store[k] === 'function') actions.push(k);
-              else stateKeys.push(k);
-            } catch {}
-          }
-          stores.push({ type: 'pinia', id, actions: actions.slice(0, 20), stateKeys: stateKeys.slice(0, 15) });
-        });
-      }
-
-      // Vuex store modules
-      const vuex = gp?.$store;
-      if (vuex?._modules?.root?._children) {
-        const children = vuex._modules.root._children;
-        for (const [modName, mod] of Object.entries(children)) {
-          const actions = Object.keys(mod._rawModule?.actions ?? {}).slice(0, 20);
-          const stateKeys = Object.keys(mod.state ?? {}).slice(0, 15);
-          stores.push({ type: 'vuex', id: modName, actions, stateKeys });
-        }
-      }
-    } catch {}
-    return stores;
-  }
-`;
+const STORE_DISCOVER_JS = discoverStores.toString();
 
 export interface DiscoveredStore {
   type: 'pinia' | 'vuex';
@@ -268,27 +219,7 @@ export interface DiscoveredStore {
 
 // ── Auto-Interaction (Fuzzing) ─────────────────────────────────────────────
 
-const INTERACT_FUZZ_JS = `
-  async () => {
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const clickables = Array.from(document.querySelectorAll(
-      'button, [role="button"], [role="tab"], .tab, .btn, a[href="javascript:void(0)"], a[href="#"]'
-    )).slice(0, 15); // limit to 15 to avoid endless loops
-
-    let clicked = 0;
-    for (const el of clickables) {
-      try {
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-          clicked++;
-          await sleep(300); // give it time to trigger network
-        }
-      } catch {}
-    }
-    return clicked;
-  }
-`;
+const INTERACT_FUZZ_JS = interactFuzz.toString();
 
 // ── Main explore function ──────────────────────────────────────────────────
 
@@ -310,8 +241,8 @@ export async function exploreUrl(
       await page.goto(url);
       await page.wait(waitSeconds);
 
-      // Step 2: Auto-scroll to trigger lazy loading (use keyboard since page.scroll may not exist)
-      for (let i = 0; i < 3; i++) { try { await page.pressKey('End'); } catch {} await page.wait(1); }
+      // Step 2: Auto-scroll to trigger lazy loading intelligently
+      await page.autoScroll({ times: 3, delayMs: 1500 }).catch(() => {});
 
       // Step 2.5: Interactive Fuzzing (if requested)
       if (opts.auto) {
@@ -345,11 +276,27 @@ export async function exploreUrl(
       const rawNetwork = await page.networkRequests(false);
       const networkEntries = parseNetworkRequests(rawNetwork);
 
-      // Step 5: For JSON endpoints, re-fetch response body in-browser
-      const jsonEndpoints = networkEntries.filter(e => e.contentType.includes('json') && e.method === 'GET' && e.status === 200);
-      for (const ep of jsonEndpoints.slice(0, 10)) {
+      // Step 5: For JSON endpoints missing a body, carefully re-fetch in-browser via a pristine iframe
+      const jsonEndpoints = networkEntries.filter(e => e.contentType.includes('json') && e.method === 'GET' && e.status === 200 && !e.responseBody);
+      for (const ep of jsonEndpoints.slice(0, 5)) {
         try {
-          const body = await page.evaluate(`async () => { try { const r = await fetch(${JSON.stringify(ep.url)}, {credentials:'include'}); if (!r.ok) return null; const d = await r.json(); return JSON.stringify(d).slice(0,10000); } catch { return null; } }`);
+          const body = await page.evaluate(`async () => {
+            let iframe = null;
+            try {
+              iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              document.body.appendChild(iframe);
+              const cleanFetch = iframe.contentWindow.fetch || window.fetch;
+              const r = await cleanFetch(${JSON.stringify(ep.url)}, { credentials: 'include' });
+              if (!r.ok) return null;
+              const d = await r.json();
+              return JSON.stringify(d).slice(0, 10000);
+            } catch {
+              return null;
+            } finally {
+              if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+            }
+          }`);
           if (body && typeof body === 'string') { try { ep.responseBody = JSON.parse(body); } catch {} }
           else if (body && typeof body === 'object') ep.responseBody = body;
         } catch {}
@@ -455,7 +402,7 @@ export async function exploreUrl(
 
       const siteName = opts.site ?? detectSiteName(metadata.url || url);
       const targetDir = opts.outDir ?? path.join('.opencli', 'explore', siteName);
-      fs.mkdirSync(targetDir, { recursive: true });
+      await fs.promises.mkdir(targetDir, { recursive: true });
 
       const result = {
         site: siteName, target_url: url, final_url: metadata.url, title: metadata.title,
@@ -466,24 +413,26 @@ export async function exploreUrl(
       };
 
       // Write artifacts
-      fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify({
+      const writeTasks = [];
+      writeTasks.push(fs.promises.writeFile(path.join(targetDir, 'manifest.json'), JSON.stringify({
         site: siteName, target_url: url, final_url: metadata.url, title: metadata.title,
         framework, stores: stores.map(s => ({ type: s.type, id: s.id, actions: s.actions })),
         top_strategy: topStrategy, explored_at: new Date().toISOString(),
-      }, null, 2));
-      fs.writeFileSync(path.join(targetDir, 'endpoints.json'), JSON.stringify(analyzedEndpoints.map(ep => ({
+      }, null, 2)));
+      writeTasks.push(fs.promises.writeFile(path.join(targetDir, 'endpoints.json'), JSON.stringify(analyzedEndpoints.map(ep => ({
         pattern: ep.pattern, method: ep.method, url: ep.url, status: ep.status,
         contentType: ep.contentType, score: ep.score, queryParams: ep.queryParams,
         itemPath: ep.responseAnalysis?.itemPath ?? null, itemCount: ep.responseAnalysis?.itemCount ?? 0,
         detectedFields: ep.responseAnalysis?.detectedFields ?? {}, authIndicators: ep.authIndicators,
-      })), null, 2));
-      fs.writeFileSync(path.join(targetDir, 'capabilities.json'), JSON.stringify(capabilities, null, 2));
-      fs.writeFileSync(path.join(targetDir, 'auth.json'), JSON.stringify({
+      })), null, 2)));
+      writeTasks.push(fs.promises.writeFile(path.join(targetDir, 'capabilities.json'), JSON.stringify(capabilities, null, 2)));
+      writeTasks.push(fs.promises.writeFile(path.join(targetDir, 'auth.json'), JSON.stringify({
         top_strategy: topStrategy, indicators: [...allAuth], framework,
-      }, null, 2));
+      }, null, 2)));
       if (stores.length > 0) {
-        fs.writeFileSync(path.join(targetDir, 'stores.json'), JSON.stringify(stores, null, 2));
+        writeTasks.push(fs.promises.writeFile(path.join(targetDir, 'stores.json'), JSON.stringify(stores, null, 2)));
       }
+      await Promise.all(writeTasks);
 
       return { ...result, out_dir: targetDir };
     })(), { timeout: exploreTimeout, label: `Explore ${url}` });

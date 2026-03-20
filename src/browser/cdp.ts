@@ -4,6 +4,7 @@
 
 import { WebSocket } from 'ws';
 import type { IPage } from '../types.js';
+import { wrapForEval } from './utils.js';
 
 export interface CDPTarget {
   type?: string;
@@ -218,16 +219,6 @@ class CDPPage implements IPage {
     throw new Error('Method not implemented.');
   }
 }
-
-function wrapForEval(js: string): string {
-  const code = js.trim();
-  if (!code) return 'undefined';
-  if (/^\([\s\S]*\)\s*\(.*\)\s*$/.test(code)) return code;
-  if (/^(async\s+)?(\([^)]*\)|[A-Za-z_]\w*)\s*=>/.test(code)) return `(${code})()`;
-  if (/^(async\s+)?function[\s(]/.test(code)) return `(${code})()`;
-  return code;
-}
-
 function selectCDPTarget(targets: CDPTarget[]): CDPTarget | undefined {
   const preferredPattern = compilePreferredPattern(process.env.OPENCLI_CDP_TARGET);
 

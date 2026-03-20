@@ -13,6 +13,7 @@
 import { formatSnapshot } from '../snapshotFormatter.js';
 import type { IPage } from '../types.js';
 import { sendCommand } from './daemon-client.js';
+import { wrapForEval } from './utils.js';
 
 /**
  * Page — implements IPage by talking to the daemon via HTTP.
@@ -285,27 +286,4 @@ export class Page implements IPage {
   }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-/**
- * Wrap JS code for CDP Runtime.evaluate:
- * - Already an IIFE `(...)()` → send as-is
- * - Arrow/function literal → wrap as IIFE `(code)()`
- * - `new Promise(...)` or raw expression → send as-is (expression)
- */
-function wrapForEval(js: string): string {
-  const code = js.trim();
-  if (!code) return 'undefined';
-
-  // Already an IIFE: `(async () => { ... })()` or `(function() {...})()`
-  if (/^\([\s\S]*\)\s*\(.*\)\s*$/.test(code)) return code;
-
-  // Arrow function: `() => ...` or `async () => ...`
-  if (/^(async\s+)?(\([^)]*\)|[A-Za-z_]\w*)\s*=>/.test(code)) return `(${code})()`;
-
-  // Function declaration: `function ...` or `async function ...`
-  if (/^(async\s+)?function[\s(]/.test(code)) return `(${code})()`;
-
-  // Everything else: bare expression, `new Promise(...)`, etc. → evaluate directly
-  return code;
-}
+// (End of file)

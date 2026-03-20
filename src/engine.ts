@@ -28,12 +28,14 @@ export async function discoverClis(...dirs: string[]): Promise<void> {
   // Fast path: try manifest first (production / post-build)
   for (const dir of dirs) {
     const manifestPath = path.resolve(dir, '..', 'cli-manifest.json');
-    if (fs.existsSync(manifestPath)) {
-      loadFromManifest(manifestPath, dir);
+    try {
+      await fs.promises.access(manifestPath);
+      await loadFromManifest(manifestPath, dir);
       continue; // Skip filesystem scan for this directory
+    } catch {
+      // Fallback: runtime filesystem scan (development)
+      await discoverClisFromFs(dir);
     }
-    // Fallback: runtime filesystem scan (development)
-    await discoverClisFromFs(dir);
   }
 }
 
@@ -42,9 +44,10 @@ export async function discoverClis(...dirs: string[]): Promise<void> {
  * YAML pipelines are inlined — zero YAML parsing at runtime.
  * TS modules are deferred — loaded lazily on first execution.
  */
-function loadFromManifest(manifestPath: string, clisDir: string): void {
+async function loadFromManifest(manifestPath: string, clisDir: string): Promise<void> {
   try {
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as any[];
+    const raw = await fs.promises.readFile(manifestPath, 'utf-8');
+    const manifest = JSON.parse(raw) as any[];
     for (const entry of manifest) {
       if (entry.type === 'yaml') {
         // YAML pipelines fully inlined in manifest — register directly
@@ -94,15 +97,19 @@ function loadFromManifest(manifestPath: string, clisDir: string): void {
  * Fallback: traditional filesystem scan (used during development with tsx).
  */
 async function discoverClisFromFs(dir: string): Promise<void> {
-  if (!fs.existsSync(dir)) return;
+  try { await fs.promises.access(dir); } catch { return; }
   const promises: Promise<any>[] = [];
-  for (const site of fs.readdirSync(dir)) {
+  const sites = await fs.promises.readdir(dir);
+  
+  for (const site of sites) {
     const siteDir = path.join(dir, site);
-    if (!fs.statSync(siteDir).isDirectory()) continue;
-    for (const file of fs.readdirSync(siteDir)) {
+    const stat = await fs.promises.stat(siteDir);
+    if (!stat.isDirectory()) continue;
+    const files = await fs.promises.readdir(siteDir);
+    for (const file of files) {
       const filePath = path.join(siteDir, file);
       if (file.endsWith('.yaml') || file.endsWith('.yml')) {
-        registerYamlCli(filePath, site);
+        promises.push(registerYamlCli(filePath, site));
       } else if (
         (file.endsWith('.js') && !file.endsWith('.d.js')) ||
         (file.endsWith('.ts') && !file.endsWith('.d.ts') && !file.endsWith('.test.ts'))
@@ -118,9 +125,9 @@ async function discoverClisFromFs(dir: string): Promise<void> {
   await Promise.all(promises);
 }
 
-function registerYamlCli(filePath: string, defaultSite: string): void {
+async function registerYamlCli(filePath: string, defaultSite: string): Promise<void> {
   try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
+    const raw = await fs.promises.readFile(filePath, 'utf-8');
     const def = yaml.load(raw) as any;
     if (!def || typeof def !== 'object') return;
 
